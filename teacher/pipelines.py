@@ -20,7 +20,7 @@ class TeacherPipeline(object):
 
     def __init__(self):  
         # 建立数据库连接  
-        self.connect = pymysql.connect('localhost','root','','question',use_unicode=True,charset='utf8')  
+        self.connect = pymysql.connect('localhost','root','','phpyun_test',use_unicode=True,charset='utf8')  
         # 获取游标 
         self.cursor = self.connect.cursor()  
         print("connecting mysql success!")  

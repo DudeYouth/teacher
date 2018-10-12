@@ -4,6 +4,7 @@ import time
 import numpy
 import re
 import sys
+import json
 
 from teacher.items import TeacherItem
 
@@ -34,11 +35,14 @@ class teacherSpider(scrapy.Spider):
         item['name'] = res.xpath('//div[@class="company"]/text()').extract()[0]
         item['job_class'] = res.xpath('//span[@class="name"]/text()').extract()[0]
         msg = res.xpath('//div[@class="job_request"]/p/span/text()').extract()
-        print([msg,31321321312])
-        sys.exit()
-        salary = re.findall(r"(\d+)W",msg[0])
-        item['minsalary'] = salary[0]
-        item['maxsalary'] = salary[1]
+        arr = msg[0].split('/')
+        salary = re.findall(r"(\d+)[WK]",msg[0])
+        if arr[1].strip()=='年':
+            item['minsalary'] = int(salary[0])*10/12
+            item['maxsalary'] = int(salary[1])*10/12
+        else:
+            item['minsalary'] = salary[0]
+            item['maxsalary'] = salary[1]
         item['area'] = msg[1]
         timer = re.findall(r'(.+)?年以上',msg[2])
         item['timer'] = timer[0] if timer else '';
@@ -46,15 +50,21 @@ class teacherSpider(scrapy.Spider):
         item['education'] = education[0] if education else ''
         item['job'] = msg[4]
         item['description'] = res.xpath('//div[@class="desc-wrap"]/text()').extract()[0];
-        contents = res.xpath('//div[@class="ddesc-wrap contact"]/div/text()').extract();
+        contents = res.xpath('//div[@class="desc-wrap contact"]/div/text()').extract();
         item['contact'] = contents[0]
         item['address'] = contents[1]
         phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0];
         request = scrapy.Request('http://www.job910.com/api/job/index.ashx?jobid='+phoneId+'&d_type=phone',callback=self.getContact)
-        item['phone'] = request.meta['phone']
+        request.meta['item'] = item
+        yield request
     
     def getContact(self,response):
-        response.meta['phone'] = response['Data']['Phone']
+        item = response.meta['item']
+        res = json.loads(response.body)
+        item['phone'] = res['Data']['Phone']
+        for key in item:
+            item[key] = item[key].strip()
+        yield item
 
 
 
