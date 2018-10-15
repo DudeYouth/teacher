@@ -5,6 +5,7 @@ import numpy
 import re
 import sys
 import json
+from lxml import html
 
 from teacher.items import TeacherItem
 
@@ -32,8 +33,9 @@ class teacherSpider(scrapy.Spider):
         item = TeacherItem()
         item['savetype'] = 4
         res = response.xpath("//div[@id='jobs-page']")
-        item['name'] = res.xpath('//div[@class="company"]/text()').extract()[0]
-        item['job_class'] = res.xpath('//span[@class="name"]/text()').extract()[0]
+        item['name'] = res.xpath('//span[@class="name"]/text()').extract()[0]
+        item['job_class'] = item['name']
+        item['company_name'] = res.xpath('//div[@class="job-name"]/div[@class="company"]/a/text()').extract()[0]
         msg = res.xpath('//div[@class="job_request"]/p/span/text()').extract()
         arr = msg[0].split('/')
         salary = re.findall(r"(\d+)[WK]",msg[0])
@@ -49,10 +51,11 @@ class teacherSpider(scrapy.Spider):
         education = re.findall(r'(.+)?及以上',msg[3])
         item['education'] = education[0] if education else ''
         item['job'] = msg[4]
-        item['description'] = res.xpath('//div[@class="desc-wrap"]/text()').extract()[0];
+        item['description'] =  res.xpath('//div[@class="desc-wrap"]').extract()[0]
         contents = res.xpath('//div[@class="desc-wrap contact"]/div/text()').extract();
         item['contact'] = contents[0]
         item['address'] = contents[1]
+        
         phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0];
         request = scrapy.Request('http://www.job910.com/api/job/index.ashx?jobid='+phoneId+'&d_type=phone',callback=self.getContact)
         request.meta['item'] = item
@@ -63,7 +66,8 @@ class teacherSpider(scrapy.Spider):
         res = json.loads(response.body)
         item['phone'] = res['Data']['Phone']
         for key in item:
-            item[key] = item[key].strip()
+            if isinstance(item[key],str):
+                item[key] = item[key].strip()
         yield item
 
 
