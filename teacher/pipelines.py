@@ -6,7 +6,6 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
 import pymysql
-import md5
 import phpserialize
 
 class TeacherPipeline(object):
@@ -29,11 +28,13 @@ class TeacherPipeline(object):
     def process_item(self, item, spider):
         jsons = {}
         # 工作经验
-        timerSql = "select id from zpcomclass where name='%s'"%(timers[item['timer']]);
+        timerSql = "select id from zpcomclass where name='%s'"%(item['timer']);
         self.cursor.execute(timerSql)
         timerData = self.cursor.fetchone()
-        if not timerData:
+        if timerData:
             jsons['exp'] = timerData['id']
+        else:
+            timerSql = "insert into zpcomclass(keyid,name,variable,sort) value(7,'%s','',%d)"%(item['education'],int(educationData['sort'])+1)
 
         # 学历
         educationSql = "select id from zpcomclass where name='%s'"%(item['education']);
@@ -41,11 +42,11 @@ class TeacherPipeline(object):
         educationData = self.cursor.fetchone()
         if educationData:
             jsons['edu'] = educationData['id']
-        else
-            educationSql = "select max(sort) from zpcomclass where keyid=38;
+        else:
+            educationSql = "select max(sort) from zpcomclass where keyid=38"
             self.cursor.execute(educationSql)
             educationData = self.cursor.fetchone()
-            educationSql = "insert into zpcomclass(keyid,name,variable,sort) value(7,'%s','',%d)"%(item['education'],int(educationData['sort'])+1);
+            educationSql = "insert into zpcomclass(keyid,name,variable,sort) value(7,'%s','',%d)"%(item['education'],int(educationData['sort'])+1)
             self.cursor.execute(educationSql)
             jsons['edu'] = self.cursor.lastrowid
 
@@ -99,10 +100,14 @@ class TeacherPipeline(object):
         save = phpserialize.dumps(jsons)
         sqlstr = "insert into zplssave(uid,save,savetype) values(2,'%s',4)"%(save)
         self.cursor.execute(sqlstr)
+        sqlstr = "select max(uid) uid from zpcompany"
+        self.cursor.execute(sqlstr)
+        userData = self.cursor.fetchone()
+        uid = int(userData['uid'])+1 if userData else 1;
         sqlstr = "insert into zpcompany set name='%s',shortname='%s',hy=35,pr=23,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
         self.cursor.execute(sqlstr)
         uid = self.cursor.lastrowid
-        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son1=87,number=40,exp=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons[''],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
+        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101)
         self.cursor.execute(sqlstr)
         jobid = self.cursor.lastrowid
         sqlstr = "insert into uid,jobid"%(uid,jobid)

@@ -4,8 +4,15 @@ import pymysql
 connect = pymysql.connect('localhost','root','','phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
 # 获取游标 
 cursor = connect.cursor()  
-print("connecting mysql success!") 
-timerSql = "select * from zpcomclass where name='测试'"
-cursor.execute(timerSql)
-timerData = cursor.fetchone()
-print(timerData['id'])
+print("connecting mysql success!")
+try:
+    sqlstr = "select max(uid) uid from zpcompany"
+    cursor.execute(sqlstr)
+    userData = cursor.fetchone()
+    uid = int(userData['uid'])+1 if userData else 1;
+    print(uid)
+    connect.commit()
+except Exception:
+    print("发生异常",Exception)
+    connect.rollback()
+print(cursor)
