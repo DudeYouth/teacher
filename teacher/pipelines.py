@@ -27,7 +27,7 @@ class TeacherPipeline(object):
         print("connecting mysql success!")  
 
     def process_item(self, item, spider):
-        jsons = {};
+        jsons = {}
         # 工作经验
         timerSql = "select id from zpcomclass where name='%s'"%(timers[item['timer']]);
         self.cursor.execute(timerSql)
@@ -102,6 +102,10 @@ class TeacherPipeline(object):
         sqlstr = "insert into zpcompany set name='%s',shortname='%s',hy=35,pr=23,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
         self.cursor.execute(sqlstr)
         uid = self.cursor.lastrowid
-        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son1=87,number=40,exp=%d,report=54,sex=3,edu=%d,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
+        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son1=87,number=40,exp=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons[''],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
+        self.cursor.execute(sqlstr)
+        jobid = self.cursor.lastrowid
+        sqlstr = "insert into uid,jobid"%(uid,jobid)
+        self.cursor.execute(sqlstr)
         self.connect.commit() 
         return item
