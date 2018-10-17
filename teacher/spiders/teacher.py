@@ -47,7 +47,9 @@ class teacherSpider(scrapy.Spider):
             item['maxsalary'] = salary[1]
         item['area'] = msg[1]
         timer = re.findall(r'(.+)?年以上',msg[2])
-        item['timer'] = timer[0] if timer else '';
+        if not timer:
+           timer = re.findall(r'经验(不限)',msg[2]) 
+        item['timer'] = timer[0] if timer else ''
         education = re.findall(r'(.+)?及以上',msg[3])
         item['education'] = education[0] if education else ''
         item['job'] = msg[4]

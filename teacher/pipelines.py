@@ -11,11 +11,15 @@ import phpserialize
 class TeacherPipeline(object):
     timers = {
         '一':'1年以上',
-        '二':'2年以上',
+        '两':'2年以上',
         '三':'3年以上',
+        '四':'4年以上',
         '五':'5年以上',
+        '六':'6年以上',
+        '七':'7年以上',
         '八':'8年以上',
-        '十':'10年以上'
+        '十':'10年以上',
+        '不限':'不限',
     }
 
     def __init__(self):  
@@ -28,14 +32,22 @@ class TeacherPipeline(object):
     def process_item(self, item, spider):
         jsons = {}
         # 工作经验
-        timerSql = "select id from zpcomclass where name='%s'"%(item['timer']);
+        timer = self.timers[item['timer']] if item['timer'] else '应届毕业生'
+        timerSql = "select id from zpcomclass where name='%s'"%(timer)
         self.cursor.execute(timerSql)
         timerData = self.cursor.fetchone()
         if timerData:
             jsons['exp'] = timerData['id']
         else:
-            timerSql = "insert into zpcomclass(keyid,name,variable,sort) value(7,'%s','',%d)"%(item['education'],int(educationData['sort'])+1)
-
+            timerSql = "select * from zpcomclass where keyid=10"
+            self.cursor.execute(timerSql)
+            timerData = self.cursor.fetchone()
+            sort = 0
+            if timerData:
+                sort = timerData['sort']
+            timerSql = "insert into zpcomclass(keyid,name,variable,sort) value(10,'%s','',%d)"%(item['education'],sort+1)
+            self.cursor.execute(timerSql)
+            jsons['exp'] = self.cursor.lastrowid
         # 学历
         educationSql = "select id from zpcomclass where name='%s'"%(item['education']);
         self.cursor.execute(educationSql)
@@ -43,10 +55,13 @@ class TeacherPipeline(object):
         if educationData:
             jsons['edu'] = educationData['id']
         else:
-            educationSql = "select max(sort) from zpcomclass where keyid=38"
+            educationSql = "select max(sort) sort from zpcomclass where keyid=38"
             self.cursor.execute(educationSql)
             educationData = self.cursor.fetchone()
-            educationSql = "insert into zpcomclass(keyid,name,variable,sort) value(7,'%s','',%d)"%(item['education'],int(educationData['sort'])+1)
+            sort = 0
+            if timerData:
+                sort = educationData['sort']
+            educationSql = "insert into zpcomclass(keyid,name,variable,sort) value(38,'%s','',%d)"%(item['education'],sort+1)
             self.cursor.execute(educationSql)
             jsons['edu'] = self.cursor.lastrowid
 
@@ -63,19 +78,20 @@ class TeacherPipeline(object):
 
         # 城市地址
         areas = item['area'].split('-');
-        areaSql = "select id from zpcity_class where keyid=0 and name like '%%s%'"%(areas[0])
+        areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
-        job_post['provinceid'] = areaData['id']
-        areaSql = "select id from zpcity_class where keyid=%d and name like '%%s%'"%(areaData['id'],areas[1])
+        jsons['provinceid'] = areaData['id']
+        areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[1])
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
-        job_post['cityid'] = areaData['id']
-        if areas[2]:
-            areaSql = "select id from zpcity_class where keyid=%d and name like '%%s%'"%(areaData['id'],areas[2])
+        print([jsons['provinceid'],areaData,areas,454654654564654645646456])
+        jsons['cityid'] = areaData['id']
+        if len(areas)>2:
+            areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
             self.cursor.execute(areaSql)
             areaData = self.cursor.fetchone()
-            job_post['three_cityid'] = areaData['id']
+            jsons['three_cityid'] = areaData['id']
         jsons['minsalary'] = item['minsalary']
         jsons['minsalary'] = item['maxsalary']
         jsons['hy'] = 35
@@ -88,7 +104,7 @@ class TeacherPipeline(object):
         jsons['islink'] = 1 
         jsons['link_man'] = ''
         jsons['link_moblie'] = '' 
-        jsons['tblink'] = item['report'] 
+        jsons['tblink'] = jsons['report'] 
         jsons['isemail'] = 1
         jsons['email'] = ''
         jsons['submitBtn'] = "提 交 操 作" 
@@ -97,14 +113,14 @@ class TeacherPipeline(object):
         jsons['save'] = '' 
         jsons['name'] = item['name'] 
         jsons['description'] = item['description']
-        save = phpserialize.dumps(jsons)
-        sqlstr = "insert into zplssave(uid,save,savetype) values(2,'%s',4)"%(save)
-        self.cursor.execute(sqlstr)
+        # save = phpserialize.dumps(jsons)
+        # sqlstr = "insert into zplssave(uid,save,savetype) values(%d,'%s',4)"%(uid,save)
+        # self.cursor.execute(sqlstr)
         sqlstr = "select max(uid) uid from zpcompany"
         self.cursor.execute(sqlstr)
         userData = self.cursor.fetchone()
         uid = int(userData['uid'])+1 if userData else 1;
-        sqlstr = "insert into zpcompany set name='%s',shortname='%s',hy=35,pr=23,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['address'],jsons['linktel'])
+        sqlstr = "insert into zpcompany set name='%s',shortname='%s',hy=35,pr=23,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],item['address'],item['phone'])
         self.cursor.execute(sqlstr)
         uid = self.cursor.lastrowid
         sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101)
