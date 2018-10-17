@@ -93,7 +93,7 @@ class TeacherPipeline(object):
             areaData = self.cursor.fetchone()
             jsons['three_cityid'] = areaData['id']
         jsons['minsalary'] = item['minsalary']
-        jsons['minsalary'] = item['maxsalary']
+        jsons['maxsalary'] = item['maxsalary']
         jsons['hy'] = 35
         jsons['number'] = 40
         jsons['report'] = 54
@@ -124,6 +124,7 @@ class TeacherPipeline(object):
         self.cursor.execute(sqlstr)
         uid = self.cursor.lastrowid
         sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101)
+        print("insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101))
         self.cursor.execute(sqlstr)
         jobid = self.cursor.lastrowid
         sqlstr = "insert into uid,jobid"%(uid,jobid)
