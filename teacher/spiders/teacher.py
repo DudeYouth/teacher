@@ -65,6 +65,10 @@ class teacherSpider(scrapy.Spider):
         phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0];
         request = scrapy.Request('http://www.job910.com/api/job/index.ashx?jobid='+phoneId+'&d_type=phone',callback=self.getContact)
         request.meta['item'] = item
+
+        url = res.xpath('//div[@class="job_name"]/div[@class="company"]/a/@href').extract()[0];
+        request = scrapy.Request('http://www.job910.com'+url,callback=self.getCompanyIfo)
+        request.meta['item'] = item
         yield request
     
     def getContact(self,response):
@@ -75,7 +79,9 @@ class teacherSpider(scrapy.Spider):
             if isinstance(item[key],str):
                 item[key] = item[key].strip()
         yield item
-
-
+    
+    def getCompanyIfo(self,response):
+        res = response.xpath("//div[@id='jobs-page']")
+        yield item
 
 

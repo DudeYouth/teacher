@@ -146,6 +146,7 @@ class TeacherPipeline(object):
             sqlstr = "insert into zpmember set username='%s',password='%s',moblie='%s',login_ip='119.130.207.169',usertype=2,salt='%s'"%(item['company_name'],password,str(moblie),salt)
             self.cursor.execute(sqlstr)
             uid = self.cursor.lastrowid
+            sqlstr = "insert into zpcompany set name='%s',shortname='%s',provinceid='%s',cityid='119.130.207.169',three_cityid=2,content='%s'"%(item['company_name'],password,str(moblie),salt)
         else:
             uid = userData['uid']
         print([uid,item['name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary']]);
