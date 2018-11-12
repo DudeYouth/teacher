@@ -7,6 +7,7 @@
 
 import pymysql
 import phpserialize
+import hashlib
 
 class TeacherPipeline(object):
     timers = {
@@ -21,10 +22,16 @@ class TeacherPipeline(object):
         '十':'10年以上',
         '不限':'不限',
     }
-
+    citys = [
+        '上海',
+        '重庆',
+        '天津',
+        '北京'
+    ]
     def __init__(self):  
         # 建立数据库连接  
-        self.connect = pymysql.connect('localhost','root','','phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
+        self.connect = pymysql.connect(host='123.56.177.147',port=3308,user='root',passwd='&UJM8ik,',db='phpyun',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
+        # self.connect = pymysql.connect(host='localhost',port=3306,user='root',passwd='',db='phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
         # 获取游标 
         self.cursor = self.connect.cursor()  
         print("connecting mysql success!")  
@@ -45,7 +52,7 @@ class TeacherPipeline(object):
             sort = 0
             if timerData:
                 sort = timerData['sort']
-            timerSql = "insert into zpcomclass(keyid,name,variable,sort) value(10,'%s','',%d)"%(item['education'],sort+1)
+            timerSql = "insert into zpcomclass(keyid,name,variable,sort) value(10,'%s','',%d)"%(timer,sort+1)
             self.cursor.execute(timerSql)
             jsons['exp'] = self.cursor.lastrowid
         # 学历
@@ -78,6 +85,10 @@ class TeacherPipeline(object):
 
         # 城市地址
         areas = item['area'].split('-');
+        if len(areas)<3 and areas[0] in self.citys:
+            temp = areas[1];
+            areas[1] = areas[0]
+            areas.append(temp)
         areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
@@ -85,13 +96,14 @@ class TeacherPipeline(object):
         areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[1])
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
-        print([jsons['provinceid'],areaData,areas,454654654564654645646456])
         jsons['cityid'] = areaData['id']
         if len(areas)>2:
             areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
             self.cursor.execute(areaSql)
             areaData = self.cursor.fetchone()
             jsons['three_cityid'] = areaData['id']
+        else:
+            jsons['three_cityid'] = 0
         jsons['minsalary'] = item['minsalary']
         jsons['maxsalary'] = item['maxsalary']
         jsons['hy'] = 35
@@ -116,18 +128,31 @@ class TeacherPipeline(object):
         # save = phpserialize.dumps(jsons)
         # sqlstr = "insert into zplssave(uid,save,savetype) values(%d,'%s',4)"%(uid,save)
         # self.cursor.execute(sqlstr)
-        sqlstr = "select max(uid) uid from zpcompany"
+        sqlstr = "select uid from zpcompany where name='%s'"%(item['company_name'])
         self.cursor.execute(sqlstr)
         userData = self.cursor.fetchone()
-        uid = int(userData['uid'])+1 if userData else 1;
-        sqlstr = "insert into zpcompany set name='%s',shortname='%s',hy=35,pr=23,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,address='%s',linktel='%s'"%(item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],item['address'],item['phone'])
-        self.cursor.execute(sqlstr)
-        uid = self.cursor.lastrowid
-        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101)
-        print("insert into zpcompany_job set uid=%d,name='%s',com_name='%s',hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['company_name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary'],88,101))
+        if not userData:
+            sqlstr = "select max(moblie) moblie from zpmember"
+            self.cursor.execute(sqlstr)
+            moblieData = self.cursor.fetchone()
+            if moblieData['moblie']:
+                moblie = int(moblieData['moblie'])+1
+            else:
+                moblie = '13800000000'
+            salt = '86a069'
+            password = '136139..'
+            password = hashlib.md5(password.encode(encoding='UTF-8')).hexdigest()+salt
+            password = hashlib.md5(password.encode(encoding='UTF-8')).hexdigest()
+            sqlstr = "insert into zpmember set username='%s',password='%s',moblie='%s',login_ip='119.130.207.169',usertype=2,salt='%s'"%(item['company_name'],password,str(moblie),salt)
+            self.cursor.execute(sqlstr)
+            uid = self.cursor.lastrowid
+        else:
+            uid = userData['uid']
+        print([uid,item['name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary']]);
+        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',job_post=%d,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
         self.cursor.execute(sqlstr)
         jobid = self.cursor.lastrowid
-        sqlstr = "insert into uid,jobid"%(uid,jobid)
+        sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
         self.cursor.execute(sqlstr)
         self.connect.commit() 
         return item

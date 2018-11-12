@@ -13,21 +13,25 @@ from teacher.items import TeacherItem
 class teacherSpider(scrapy.Spider):
     name = "teacher"
     # 目标地址
-    start_urls = [
-        "http://www.job910.com"
-    ]
+    start_urls = []
+    def __init__(self):
+        n = 1
+        while n <= 1457:
+            self.start_urls.append("http://www.job910.com/search.aspx?pageIndex="+str(n))
+            n+=1
 
     def parse(self, response):
-        for url in response.xpath("//ul[@class='famous-hot-info clearfix']/li/a/@href").extract():
-            request = scrapy.Request(url,callback=self.getTeacherMsg)
+        # for url in response.xpath("//ul[@class='famous-hot-info clearfix']/li/a/@href").extract():
+        #     request = scrapy.Request(url,callback=self.getTeacherMsg)
+        #     yield request
+        for url in response.xpath("//ul[@class='search-result-list']/li/div[@class='info-col-1st']/div/a/@href").extract():
+            request = scrapy.Request('http://www.job910.com'+url,callback=self.getTeacherInfo)
             yield request
-
-    def getTeacherMsg(self,response):
-        
-        for url in response.xpath("//div[@class='joblist']/ul/li/a/@href").extract():
-            url = 'http:'+url
-            request = scrapy.Request(url,callback=self.getTeacherInfo)
-            yield request
+    #def getTeacherMsg(self,response):  
+        # for url in response.xpath("//div[@class='joblist']/ul/li/a/@href").extract():
+        #     url = 'http:'+url
+        #     request = scrapy.Request(url,callback=self.getTeacherInfo)
+        #     yield request
 
     def getTeacherInfo(self,response):
         item = TeacherItem()
