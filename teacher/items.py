@@ -25,4 +25,8 @@ class TeacherItem(scrapy.Item):
     address = scrapy.Field()
     phone = scrapy.Field()
     company_name = scrapy.Field()
+    website = scrapy.Field()
+    school_desc = scrapy.Field()
+    pr = scrapy.Field()
+    mun = scrapy.Field()
     pass

@@ -31,12 +31,35 @@ class TeacherPipeline(object):
     def __init__(self):  
         # 建立数据库连接  
         self.connect = pymysql.connect(host='123.56.177.147',port=3308,user='root',passwd='&UJM8ik,',db='phpyun',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
-        # self.connect = pymysql.connect(host='localhost',port=3306,user='root',passwd='',db='phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
+        #self.connect = pymysql.connect(host='localhost',port=3306,user='root',passwd='',db='phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
         # 获取游标 
         self.cursor = self.connect.cursor()  
         print("connecting mysql success!")  
 
     def process_item(self, item, spider):
+        sqlstr = "select id from zpcomclass where name='%s'"%(item['pr'])
+        self.cursor.execute(sqlstr)
+        prData = self.cursor.fetchone()
+        prId = 0
+        if prData:
+            prId = prData['id']
+        else:
+            sqlstr = "insert into zpcomclass(keyid,name,variable,sort) value(0,'%s','',%d)"%(item['pr'],1)
+            self.cursor.execute(sqlstr)
+            prId = self.cursor.lastrowid
+
+        sqlstr = "select id from zpcomclass where name='%s'"%(item['mun'])
+        self.cursor.execute(sqlstr)
+        munData = self.cursor.fetchone()
+        munId = 0
+        if munData:
+            munId = munData['id']
+        else:
+            sqlstr = "insert into zpcomclass(keyid,name,variable,sort) value(0,'%s','',%d)"%(item['mun'],1)
+            self.cursor.execute(sqlstr)
+            munId = self.cursor.lastrowid
+        # sqlstr = "update zpcompany set pr=%d,mun=%d where name='%s'"%(prId,munId,item['company_name'])
+        # self.cursor.execute(sqlstr)
         jsons = {}
         # 工作经验
         timer = self.timers[item['timer']] if item['timer'] else '应届毕业生'
@@ -86,9 +109,12 @@ class TeacherPipeline(object):
         # 城市地址
         areas = item['area'].split('-');
         if len(areas)<3 and areas[0] in self.citys:
-            temp = areas[1];
-            areas[1] = areas[0]
-            areas.append(temp)
+            try:
+                temp = areas[1];
+                areas[1] = areas[0]
+                areas.append(temp)
+            except ZeroDivisionError as e:
+                print( [areas,'9999999999999999999999999999999'] )
         areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
@@ -97,13 +123,16 @@ class TeacherPipeline(object):
         self.cursor.execute(areaSql)
         areaData = self.cursor.fetchone()
         jsons['cityid'] = areaData['id']
-        if len(areas)>2:
-            areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
-            self.cursor.execute(areaSql)
-            areaData = self.cursor.fetchone()
-            jsons['three_cityid'] = areaData['id']
-        else:
-            jsons['three_cityid'] = 0
+        try:
+            if len(areas)>2:
+                areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
+                self.cursor.execute(areaSql)
+                areaData = self.cursor.fetchone()
+                jsons['three_cityid'] = areaData['id']
+            else:
+                jsons['three_cityid'] = 0
+        except ZeroDivisionError as e:
+                jsons['three_cityid'] = 0
         jsons['minsalary'] = item['minsalary']
         jsons['maxsalary'] = item['maxsalary']
         jsons['hy'] = 35
@@ -125,9 +154,7 @@ class TeacherPipeline(object):
         jsons['save'] = '' 
         jsons['name'] = item['name'] 
         jsons['description'] = item['description']
-        # save = phpserialize.dumps(jsons)
-        # sqlstr = "insert into zplssave(uid,save,savetype) values(%d,'%s',4)"%(uid,save)
-        # self.cursor.execute(sqlstr)
+
         sqlstr = "select uid from zpcompany where name='%s'"%(item['company_name'])
         self.cursor.execute(sqlstr)
         userData = self.cursor.fetchone()
@@ -143,17 +170,23 @@ class TeacherPipeline(object):
             password = '136139..'
             password = hashlib.md5(password.encode(encoding='UTF-8')).hexdigest()+salt
             password = hashlib.md5(password.encode(encoding='UTF-8')).hexdigest()
-            sqlstr = "insert into zpmember set username='%s',password='%s',moblie='%s',login_ip='119.130.207.169',usertype=2,salt='%s'"%(item['company_name'],password,str(moblie),salt)
+            sqlstr = "insert into zpmember set username='%s',password='%s',moblie='%s',status=1,login_ip='119.130.207.169',usertype=2,salt='%s'"%(item['company_name'],password,str(moblie),salt)
             self.cursor.execute(sqlstr)
             uid = self.cursor.lastrowid
-            sqlstr = "insert into zpcompany set name='%s',shortname='%s',provinceid='%s',cityid='119.130.207.169',three_cityid=2,content='%s'"%(item['company_name'],password,str(moblie),salt)
+            sqlstr = "insert into zpcompany set uid=%d,name='%s',shortname='%s',provinceid=%d,cityid=%d,three_cityid=%d,busstops='',welfare='',content='%s',website='%s',pr=%d,mun=%d"%(uid,item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],pymysql.escape_string(item['school_desc']),item['website'],munId,prId)
+            self.cursor.execute(sqlstr)
+            sqlstr = "insert into zpcompany_statis set uid=%d,sq_job=0,all_pay=0,consum_pay=0,fav_job=0,rating=3,rating_name='免费会员',job_num=20,editjob_num=20,breakjob_num=20,part_num=10,editpart_num=10,breakpart_num=10"%(uid)
+            self.cursor.execute(sqlstr)
         else:
             uid = userData['uid']
-        print([uid,item['name'],item['company_name'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],jsons['minsalary'],jsons['maxsalary']]);
-        sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',job_post=%d,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
+        sqlstr = "select uid from zpcompany_job where uid=%d and name='%s' and com_name='%s'"%(uid,item['name'],item['company_name'])
         self.cursor.execute(sqlstr)
-        jobid = self.cursor.lastrowid
-        sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
-        self.cursor.execute(sqlstr)
+        jobData = self.cursor.fetchone()
+        if not jobData:
+            sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',state=1,job_post=%d,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
+            self.cursor.execute(sqlstr)
+            jobid = self.cursor.lastrowid
+            sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
+            self.cursor.execute(sqlstr)
         self.connect.commit() 
         return item

@@ -43,12 +43,16 @@ class teacherSpider(scrapy.Spider):
         msg = res.xpath('//div[@class="job_request"]/p/span/text()').extract()
         arr = msg[0].split('/')
         salary = re.findall(r"(\d+)[WK]",msg[0])
-        if arr[1].strip()=='年':
-            item['minsalary'] = int(salary[0])*10/12
-            item['maxsalary'] = int(salary[1])*10/12
-        else:
-            item['minsalary'] = salary[0]
-            item['maxsalary'] = salary[1]
+        try:
+            if arr[1].strip()=='年':
+                item['minsalary'] = int(salary[0])*10/12
+                item['maxsalary'] = int(salary[1])*10/12
+            else:
+                item['minsalary'] = salary[0]
+                item['maxsalary'] = salary[1]
+        except ZeroDivisionError as e:
+            item['minsalary'] = 0
+            item['maxsalary'] = 0
         item['area'] = msg[1]
         timer = re.findall(r'(.+)?年以上',msg[2])
         if not timer:
@@ -65,10 +69,9 @@ class teacherSpider(scrapy.Spider):
         phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0];
         request = scrapy.Request('http://www.job910.com/api/job/index.ashx?jobid='+phoneId+'&d_type=phone',callback=self.getContact)
         request.meta['item'] = item
-
-        url = res.xpath('//div[@class="job_name"]/div[@class="company"]/a/@href').extract()[0];
-        request = scrapy.Request('http://www.job910.com'+url,callback=self.getCompanyIfo)
-        request.meta['item'] = item
+        url = res.xpath('//div[@class="job-name"]/div[@class="company"]/a/@href').extract()[0]
+        request.meta['url'] = url
+        
         yield request
     
     def getContact(self,response):
@@ -78,10 +81,29 @@ class teacherSpider(scrapy.Spider):
         for key in item:
             if isinstance(item[key],str):
                 item[key] = item[key].strip()
-        yield item
+        url = response.meta['url']
+        request = scrapy.Request('http://www.job910.com'+url,callback=self.getCompanyIfo)
+        request.meta['item'] = item
+        yield request
+
     
     def getCompanyIfo(self,response):
-        res = response.xpath("//div[@id='jobs-page']")
+        item = response.meta['item']
+        item['company_name'] = response.xpath("//div[@class='school-primary']/h1/text()").extract()[0].strip()
+        arr = response.xpath("//div[@class='school-primary']/p[@class='school-summary']/span/text()").extract()
+        if len(arr):
+            item['pr'] = arr[1]
+            item['mun'] = arr[2]
+        res = response.xpath("//div[@class='school-link']/a/@href").extract()
+        if res:
+            item['website'] = res[0]
+        else:
+            item['website'] = ''
+        info = response.xpath("//div[@class='school-desc overflow']").extract()
+        if info:
+            item['school_desc'] = info[0]
+        else:
+            item['school_desc'] = ''
         yield item
 
 
