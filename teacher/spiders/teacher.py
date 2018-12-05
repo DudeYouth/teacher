@@ -50,9 +50,10 @@ class teacherSpider(scrapy.Spider):
             else:
                 item['minsalary'] = salary[0]
                 item['maxsalary'] = salary[1]
-        except ZeroDivisionError as e:
+        except Exception as e:
             item['minsalary'] = 0
             item['maxsalary'] = 0
+            print('面议问题...')
         item['area'] = msg[1]
         timer = re.findall(r'(.+)?年以上',msg[2])
         if not timer:
@@ -62,11 +63,11 @@ class teacherSpider(scrapy.Spider):
         item['education'] = education[0] if education else ''
         item['job'] = msg[4]
         item['description'] =  res.xpath('//div[@class="desc-wrap"]').extract()[0]
-        contents = res.xpath('//div[@class="desc-wrap contact"]/div/text()').extract();
+        contents = res.xpath('//div[@class="desc-wrap contact"]/div/text()').extract()
         item['contact'] = contents[0]
         item['address'] = contents[1]
         
-        phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0];
+        phoneId = res.xpath('//a[@class="green-tip showphone"]/@rel').extract()[0]
         request = scrapy.Request('http://www.job910.com/api/job/index.ashx?jobid='+phoneId+'&d_type=phone',callback=self.getContact)
         request.meta['item'] = item
         url = res.xpath('//div[@class="job-name"]/div[@class="company"]/a/@href').extract()[0]

@@ -79,7 +79,7 @@ class TeacherPipeline(object):
             self.cursor.execute(timerSql)
             jsons['exp'] = self.cursor.lastrowid
         # 学历
-        educationSql = "select id from zpcomclass where name='%s'"%(item['education']);
+        educationSql = "select id from zpcomclass where name='%s'"%(item['education'])
         self.cursor.execute(educationSql)
         educationData = self.cursor.fetchone()
         if educationData:
@@ -107,22 +107,25 @@ class TeacherPipeline(object):
             jsons['job_post'] = self.cursor.lastrowid
 
         # 城市地址
-        areas = item['area'].split('-');
+        areas = item['area'].split('-')
         if len(areas)<3 and areas[0] in self.citys:
             try:
-                temp = areas[1];
+                temp = areas[1]
                 areas[1] = areas[0]
                 areas.append(temp)
-            except ZeroDivisionError as e:
-                print( [areas,'9999999999999999999999999999999'] )
-        areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
-        self.cursor.execute(areaSql)
-        areaData = self.cursor.fetchone()
-        jsons['provinceid'] = areaData['id']
-        areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[1])
-        self.cursor.execute(areaSql)
-        areaData = self.cursor.fetchone()
-        jsons['cityid'] = areaData['id']
+            except Exception as e:
+                print('area is ok!')
+            areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
+            self.cursor.execute(areaSql)
+            areaData = self.cursor.fetchone()
+            jsons['provinceid'] = areaData['id']
+            try:
+                areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[1])
+                self.cursor.execute(areaSql)
+                areaData = self.cursor.fetchone()
+                jsons['cityid'] = areaData['id']
+            except Exception as e:
+                jsons['cityid'] = 0
         try:
             if len(areas)>2:
                 areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
@@ -131,7 +134,7 @@ class TeacherPipeline(object):
                 jsons['three_cityid'] = areaData['id']
             else:
                 jsons['three_cityid'] = 0
-        except ZeroDivisionError as e:
+        except Exception as e:
                 jsons['three_cityid'] = 0
         jsons['minsalary'] = item['minsalary']
         jsons['maxsalary'] = item['maxsalary']

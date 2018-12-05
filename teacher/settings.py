@@ -15,7 +15,7 @@ SPIDER_MODULES = ['teacher.spiders']
 NEWSPIDER_MODULE = 'teacher.spiders'
 
 LOG_LEVEL = 'ERROR'
-# LOG_FILE = './log.log'
+LOG_FILE = './log.log'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'teacher (+http://www.yourdomain.com)'
