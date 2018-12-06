@@ -8,8 +8,12 @@
 import pymysql
 import phpserialize
 import hashlib
+import json
 
 class TeacherPipeline(object):
+    types = {
+        '双语教师,人文地理双语教师'
+    }
     timers = {
         '一':'1年以上',
         '两':'2年以上',
@@ -28,7 +32,12 @@ class TeacherPipeline(object):
         '天津',
         '北京'
     ]
-    def __init__(self):  
+    def read_json(self):
+        file_obj = open('./data.json')
+        content = file_obj.read()
+        self.json = json.loads(content)
+    def __init__(self): 
+        self.read_json()
         # 建立数据库连接  
         self.connect = pymysql.connect(host='123.56.177.147',port=3308,user='root',passwd='&UJM8ik,',db='phpyun',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  
         #self.connect = pymysql.connect(host='localhost',port=3306,user='root',passwd='',db='phpyun_test',use_unicode=True,charset='utf8',cursorclass = pymysql.cursors.DictCursor)  

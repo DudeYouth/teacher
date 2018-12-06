@@ -32,6 +32,32 @@ class teacherSpider(scrapy.Spider):
         #     url = 'http:'+url
         #     request = scrapy.Request(url,callback=self.getTeacherInfo)
         #     yield request
+    def getClass(self,response):
+        data = []
+        childrenArr = []
+        index = 0
+        i = 0
+        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l2']").extract():
+            item in classList.xpath("//a[@class='filter-con-l2']/div[class='filter-l2-list']").extract(): 
+                arr = []
+                id in item.xpath("//a/@data-code)").extract():
+                    arr.append({
+                        id:id
+                    })
+                name in item.xpath("//a/text()").extract():
+                    arr[index].name = name
+                    index+=1
+                childrenArr.append(arr)  
+        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l1']").extract():
+            item in classList.xpath("//a[@class='filter-l1 filter-position']").extract():
+                id in item.xpath("//a/@data-code)").extract():
+                    data.append({
+                        id:id
+                    })
+                name in item.xpath("//a/text()").extract():
+                    data[i].name = name
+                    arr[i].children = childrenArr[i]
+                    i+=1
 
     def getTeacherInfo(self,response):
         item = TeacherItem()
