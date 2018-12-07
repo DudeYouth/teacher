@@ -12,26 +12,22 @@ from teacher.items import TeacherItem
 
 class teacherSpider(scrapy.Spider):
     name = "teacher"
+    domain = "http://www.job910.com"
     # 目标地址
     start_urls = []
     def __init__(self):
-        n = 1
-        while n <= 1457:
-            self.start_urls.append("http://www.job910.com/search.aspx?pageIndex="+str(n))
-            n+=1
+        self.start_urls.append(self.domain+"/search.aspx")
 
     def parse(self, response):
-        # for url in response.xpath("//ul[@class='famous-hot-info clearfix']/li/a/@href").extract():
-        #     request = scrapy.Request(url,callback=self.getTeacherMsg)
-        #     yield request
-        for url in response.xpath("//ul[@class='search-result-list']/li/div[@class='info-col-1st']/div/a/@href").extract():
-            request = scrapy.Request('http://www.job910.com'+url,callback=self.getTeacherInfo)
-            yield request
-    #def getTeacherMsg(self,response):  
-        # for url in response.xpath("//div[@class='joblist']/ul/li/a/@href").extract():
-        #     url = 'http:'+url
-        #     request = scrapy.Request(url,callback=self.getTeacherInfo)
-        #     yield request
+        classList = self.getClass(response)
+        print(classList)
+        return
+        for item in classList:
+            for child in item.children:
+                    request = scrapy.Request(self.domain+'/search.aspx?funtype='+child['id'],callback=getPages)
+                    request.meta['typesName'] = item['name']+','+child['name']
+                    yield request                
+
     def getClass(self,response):
         data = []
         childrenArr = []
@@ -58,7 +54,17 @@ class teacherSpider(scrapy.Spider):
                     data[i].name = name
                     arr[i].children = childrenArr[i]
                     i+=1
-
+        return data
+    def getPages(self,response):
+        pageNum = response.xpath('//span/[@class="pager-mini"]/span').extract()[2]:
+        i = 1 
+        while i<=pageNum:
+            request = scrapy.Request(self.domain+'/search.aspx?funtype='+child['id']+'&'+'pageIndex='+i,callback=getTeacherList)
+            yield request
+    def getTeacherList(self,response):
+        for url in res.xpath('//div[@class="search-result-list"]/a[@class="extend"]/@href').extract():
+            request = scrapy.Request(self.domain+url,callback=getTeacherInfo)
+            yield request
     def getTeacherInfo(self,response):
         item = TeacherItem()
         item['savetype'] = 4
