@@ -29,4 +29,5 @@ class TeacherItem(scrapy.Item):
     school_desc = scrapy.Field()
     pr = scrapy.Field()
     mun = scrapy.Field()
+    typeName = scrapy.Field()
     pass

@@ -20,54 +20,55 @@ class teacherSpider(scrapy.Spider):
 
     def parse(self, response):
         classList = self.getClass(response)
-        print(classList)
-        return
         for item in classList:
-            for child in item.children:
-                    request = scrapy.Request(self.domain+'/search.aspx?funtype='+child['id'],callback=getPages)
-                    request.meta['typesName'] = item['name']+','+child['name']
+            for child in item['children']:
+                    request = scrapy.Request(self.domain+'/search.aspx?funtype='+child['id'],callback=self.getPages)
+                    request.meta['typeName'] = item['name']+','+child['name']
                     yield request                
 
     def getClass(self,response):
         data = []
         childrenArr = []
-        index = 0
+        
         i = 0
-        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l2']").extract():
-            item in classList.xpath("//a[@class='filter-con-l2']/div[class='filter-l2-list']").extract(): 
+        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l2']"):
+            for item in classList.xpath(".//div[@class='filter-l2-list']"): 
                 arr = []
-                id in item.xpath("//a/@data-code)").extract():
+                index = 0
+                for id in item.xpath(".//a/@data-code").extract():
                     arr.append({
-                        id:id
+                        'id':id
                     })
-                name in item.xpath("//a/text()").extract():
-                    arr[index].name = name
+                for name in item.xpath(".//a/text()").extract():
+                    arr[index]['name'] = name
                     index+=1
-                childrenArr.append(arr)  
-        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l1']").extract():
-            item in classList.xpath("//a[@class='filter-l1 filter-position']").extract():
-                id in item.xpath("//a/@data-code)").extract():
+                childrenArr.append(arr)
+        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l1']"):
+                for id in classList.xpath(".//a/@data-code").extract():
                     data.append({
                         id:id
                     })
-                name in item.xpath("//a/text()").extract():
-                    data[i].name = name
-                    arr[i].children = childrenArr[i]
+                for name in item.xpath(".//a/text()").extract():
+                    data[i]['name'] = name
+                    data[i]['children'] = childrenArr[i]
                     i+=1
         return data
     def getPages(self,response):
-        pageNum = response.xpath('//span/[@class="pager-mini"]/span').extract()[2]:
+        pageNum = response.xpath('//span/[@class="pager-mini"]/span').extract()[2]
         i = 1 
         while i<=pageNum:
-            request = scrapy.Request(self.domain+'/search.aspx?funtype='+child['id']+'&'+'pageIndex='+i,callback=getTeacherList)
+            request = scrapy.Request(response.url+'&'+'pageIndex='+i,callback=self.getTeacherList)
+            request.meta['typeName'] = response.meta['typeName']
             yield request
     def getTeacherList(self,response):
-        for url in res.xpath('//div[@class="search-result-list"]/a[@class="extend"]/@href').extract():
-            request = scrapy.Request(self.domain+url,callback=getTeacherInfo)
+        for url in response.xpath('//div[@class="search-result-list"]/a[@class="extend"]/@href').extract():
+            request = scrapy.Request(self.domain+url,callback=self.getTeacherInfo)
+            request.meta['typeName'] = response.meta['typeName']
             yield request
     def getTeacherInfo(self,response):
         item = TeacherItem()
         item['savetype'] = 4
+        item['typeName'] = response.meta['typeName']
         res = response.xpath("//div[@id='jobs-page']")
         item['name'] = res.xpath('//span[@class="name"]/text()').extract()[0]
         item['job_class'] = item['name']
