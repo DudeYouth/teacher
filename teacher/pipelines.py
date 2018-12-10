@@ -12,7 +12,6 @@ import json
 
 class TeacherPipeline(object):
     types = {
-        '双语教师,人文地理双语教师'
     }
     timers = {
         '一':'1年以上',
@@ -46,6 +45,14 @@ class TeacherPipeline(object):
         print("connecting mysql success!")  
 
     def process_item(self, item, spider):
+        job_class = item['job_class']
+        try:
+            job_class = self.json[item['job_class']]
+        except Exception as e:
+            job_class = item['job_class']
+        job_class = job_class.split(',')
+        job_class1 = job_class[0]
+        job_class2 = job_class[1]
         sqlstr = "select id from zpcomclass where name='%s'"%(item['pr'])
         self.cursor.execute(sqlstr)
         prData = self.cursor.fetchone()
@@ -105,39 +112,50 @@ class TeacherPipeline(object):
             jsons['edu'] = self.cursor.lastrowid
 
         # 职业类型
-        jobClassSql = "select id from zpjob_class where name='%s'"%(item['job_class'])
+        jobClassSql = "select id from zpjob_class where name='%s'"%(job_class1)
+        self.cursor.execute(jobClassSql)
+        jobClassData = self.cursor.fetchone()
+        if jobClassData:
+            job_post = jobClassData['id']
+        else:
+            jobClassSql = "insert into zpjob_class(keyid,name,sort,content) value(0,'%s',0,'')"%(job_class1)
+            self.cursor.execute(jobClassSql)
+            job_post = self.cursor.lastrowid
+
+        jobClassSql = "select id from zpjob_class where keyid=%d and name='%s'"%(job_post,job_class2)
         self.cursor.execute(jobClassSql)
         jobClassData = self.cursor.fetchone()
         if jobClassData:
             jsons['job_post'] = jobClassData['id']
         else:
-            jobClassSql = "insert into zpjob_class(keyid,name,sort,content) value(87,'%s',0,'')"%(item['job_class'])
+            jobClassSql = "insert into zpjob_class(keyid,name,sort,content) value(%d,'%s',0,'')"%(job_post,job_class2)
             self.cursor.execute(jobClassSql)
             jsons['job_post'] = self.cursor.lastrowid
-
         # 城市地址
         areas = item['area'].split('-')
+        areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
+        self.cursor.execute(areaSql)
+        areaData = self.cursor.fetchone()
+        jsons['provinceid'] = areaData['id']
+        jsons['cityid'] = 0
         if len(areas)<3 and areas[0] in self.citys:
             try:
                 temp = areas[1]
                 areas[1] = areas[0]
                 areas.append(temp)
             except Exception as e:
-                print('area is ok!')
-            areaSql = "select id from zpcity_class where keyid=0 and name like '%%%s%%'"%(areas[0])
+                areas[1] = 0
+        try:
+            areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(jsons['provinceid'],areas[1])
             self.cursor.execute(areaSql)
             areaData = self.cursor.fetchone()
-            jsons['provinceid'] = areaData['id']
-            try:
-                areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[1])
-                self.cursor.execute(areaSql)
-                areaData = self.cursor.fetchone()
-                jsons['cityid'] = areaData['id']
-            except Exception as e:
-                jsons['cityid'] = 0
+            jsons['cityid'] = areaData['id']
+        except Exception as e:
+            jsons['cityid'] = 0
+
         try:
             if len(areas)>2:
-                areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(areaData['id'],areas[2])
+                areaSql = "select id from zpcity_class where keyid=%d and name like '%%%s%%'"%(jsons['cityid'],areas[2])
                 self.cursor.execute(areaSql)
                 areaData = self.cursor.fetchone()
                 jsons['three_cityid'] = areaData['id']
@@ -185,20 +203,31 @@ class TeacherPipeline(object):
             sqlstr = "insert into zpmember set username='%s',password='%s',moblie='%s',status=1,login_ip='119.130.207.169',usertype=2,salt='%s'"%(item['company_name'],password,str(moblie),salt)
             self.cursor.execute(sqlstr)
             uid = self.cursor.lastrowid
-            sqlstr = "insert into zpcompany set uid=%d,name='%s',shortname='%s',provinceid=%d,cityid=%d,three_cityid=%d,busstops='',welfare='',content='%s',website='%s',pr=%d,mun=%d"%(uid,item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],pymysql.escape_string(item['school_desc']),item['website'],munId,prId)
+            sqlstr = "insert into zpcompany set uid=%d,hy=35,name='%s',shortname='%s',provinceid=%d,cityid=%d,three_cityid=%d,busstops='',welfare='',content='%s',website='%s',pr=%d,mun=%d"%(uid,item['company_name'],item['company_name'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],pymysql.escape_string(item['school_desc']),item['website'],munId,prId)
             self.cursor.execute(sqlstr)
             sqlstr = "insert into zpcompany_statis set uid=%d,sq_job=0,all_pay=0,consum_pay=0,fav_job=0,rating=3,rating_name='免费会员',job_num=20,editjob_num=20,breakjob_num=20,part_num=10,editpart_num=10,breakpart_num=10"%(uid)
             self.cursor.execute(sqlstr)
         else:
             uid = userData['uid']
-        sqlstr = "select uid from zpcompany_job where uid=%d and name='%s' and com_name='%s'"%(uid,item['name'],item['company_name'])
+        sqlstr = "select id,uid from zpcompany_job where uid=%d and name='%s' and com_name='%s'"%(uid,item['name'],item['company_name'])
         self.cursor.execute(sqlstr)
         jobData = self.cursor.fetchone()
+        print([uid,item['name'],item['company_name'],jobData])
         if not jobData:
-            sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',state=1,job_post=%d,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,job1=23,job1_son=87,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
-            self.cursor.execute(sqlstr)
-            jobid = self.cursor.lastrowid
-            sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
+            try:
+                sqlstr = "select keyid from zpjob_class where id=%d"%(jsons['job_post'])
+                self.cursor.execute(sqlstr)
+                jobData = self.cursor.fetchone()
+                job1 = jobData['keyid']
+                sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',state=1,job1=%d,job1_son=%d,job_post=0,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],job1,jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
+                self.cursor.execute(sqlstr)
+                jobid = self.cursor.lastrowid
+                sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
+                self.cursor.execute(sqlstr)
+            except Exception as e:
+                print(e)
+        else:
+            sqlstr = "update zpcompany_job set provinceid=%d,cityid=%d,three_cityid=%d where id=%d"%(jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jobData['id'])
             self.cursor.execute(sqlstr)
         self.connect.commit() 
         return item

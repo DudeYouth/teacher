@@ -35,43 +35,51 @@ class teacherSpider(scrapy.Spider):
             for item in classList.xpath(".//div[@class='filter-l2-list']"): 
                 arr = []
                 index = 0
-                for id in item.xpath(".//a/@data-code").extract():
+                for id in item.xpath("a/@data-code").extract():
                     arr.append({
                         'id':id
                     })
-                for name in item.xpath(".//a/text()").extract():
+                for name in item.xpath("a/text()").extract():
                     arr[index]['name'] = name
                     index+=1
                 childrenArr.append(arr)
-        for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l1']"):
-                for id in classList.xpath(".//a/@data-code").extract():
+        for classList in response.xpath("//div[@id='search-filter-wrapper']/div[@class='filters-by-type pb4']/div[@class='type-content']/div[@class='filter-con-l1']"):
+                for id in classList.xpath("a/@data-code").extract():
                     data.append({
-                        id:id
+                        'id':id
                     })
-                for name in item.xpath(".//a/text()").extract():
+                for name in classList.xpath("a/text()").extract():
                     data[i]['name'] = name
                     data[i]['children'] = childrenArr[i]
                     i+=1
         return data
     def getPages(self,response):
-        pageNum = response.xpath('//span/[@class="pager-mini"]/span').extract()[2]
-        i = 1 
-        while i<=pageNum:
-            request = scrapy.Request(response.url+'&'+'pageIndex='+i,callback=self.getTeacherList)
-            request.meta['typeName'] = response.meta['typeName']
+        typeName = response.meta['typeName']
+        pageNum = response.xpath('//span[@class="pager-mini"]/span/text()').extract()
+        if len(pageNum)==0:
+            request = scrapy.Request(response.url,callback=self.getTeacherList)
+            request.meta['typeNames'] = typeName
             yield request
+        else:
+            i = 1 
+            while i<=int(pageNum[2]):
+                request = scrapy.Request(response.url+'&'+'pageIndex='+str(i),callback=self.getTeacherList)
+                request.meta['typeNames'] = typeName
+                i+=1
+                yield request
     def getTeacherList(self,response):
-        for url in response.xpath('//div[@class="search-result-list"]/a[@class="extend"]/@href').extract():
+        typeNames = response.meta['typeNames']
+        for url in response.xpath('//ul[@id="search-result"]/li/div[@class="info-col-1st"]/div[@class="position title"]/a[@class="extend"]/@href').extract():
+            print(self.domain+url)
             request = scrapy.Request(self.domain+url,callback=self.getTeacherInfo)
-            request.meta['typeName'] = response.meta['typeName']
+            request.meta['jobClass'] = typeNames
             yield request
     def getTeacherInfo(self,response):
         item = TeacherItem()
         item['savetype'] = 4
-        item['typeName'] = response.meta['typeName']
+        item['job_class'] = response.meta['jobClass']
         res = response.xpath("//div[@id='jobs-page']")
         item['name'] = res.xpath('//span[@class="name"]/text()').extract()[0]
-        item['job_class'] = item['name']
         item['company_name'] = res.xpath('//div[@class="job-name"]/div[@class="company"]/a/text()').extract()[0]
         msg = res.xpath('//div[@class="job_request"]/p/span/text()').extract()
         arr = msg[0].split('/')
