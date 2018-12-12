@@ -212,14 +212,13 @@ class TeacherPipeline(object):
         sqlstr = "select id,uid from zpcompany_job where uid=%d and name='%s' and com_name='%s'"%(uid,item['name'],item['company_name'])
         self.cursor.execute(sqlstr)
         jobData = self.cursor.fetchone()
-        print([uid,item['name'],item['company_name'],jobData])
         if not jobData:
             try:
                 sqlstr = "select keyid from zpjob_class where id=%d"%(jsons['job_post'])
                 self.cursor.execute(sqlstr)
                 jobData = self.cursor.fetchone()
                 job1 = jobData['keyid']
-                sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',state=1,job1=%d,job1_son=%d,job_post=0,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],job1,jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary']),int(jsons['maxsalary']),88,101)
+                sqlstr = "insert into zpcompany_job set uid=%d,name='%s',com_name='%s',state=1,job1=%d,job1_son=%d,job_post=0,type=0,cert='',welfare='',sdate=unix_timestamp(now()),lastupdate=unix_timestamp(now()),statusbody='',edate=unix_timestamp(now()),hy=35,number=40,exp=%d,edu=%d,report=54,sex=3,marriage=72,provinceid=%d,cityid=%d,three_cityid=%d,mun=3,description='%s',minsalary=%d,maxsalary=%d,age=%d,lang=%d"%(uid,item['name'],item['company_name'],job1,jsons['job_post'],jsons['exp'],jsons['edu'],jsons['provinceid'],jsons['cityid'],jsons['three_cityid'],jsons['description'],int(jsons['minsalary'])*1000,int(jsons['maxsalary'])*1000,88,101)
                 self.cursor.execute(sqlstr)
                 jobid = self.cursor.lastrowid
                 sqlstr = "insert into zpcompany_job_link set uid=%d,jobid=%d"%(uid,jobid)
