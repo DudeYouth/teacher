@@ -16,7 +16,7 @@ class teacherSpider(scrapy.Spider):
     # 目标地址
     start_urls = []
     def __init__(self):
-        self.start_urls.append(self.domain+"/search.aspx")
+        self.start_urls.append(self.domain+"/   ")
 
     def parse(self, response):
         classList = self.getClass(response)
