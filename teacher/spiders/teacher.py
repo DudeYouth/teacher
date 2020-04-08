@@ -16,7 +16,7 @@ class teacherSpider(scrapy.Spider):
     # 目标地址
     start_urls = []
     def __init__(self):
-        self.start_urls.append(self.domain+"/   ")
+        self.start_urls.append(self.domain+"/search.aspx")
 
     def parse(self, response):
         classList = self.getClass(response)
@@ -29,7 +29,6 @@ class teacherSpider(scrapy.Spider):
     def getClass(self,response):
         data = []
         childrenArr = []
-        
         i = 0
         for classList in response.xpath("//div[@class='type-content']/div[@class='filter-con-l2']"):
             for item in classList.xpath(".//div[@class='filter-l2-list']"): 
